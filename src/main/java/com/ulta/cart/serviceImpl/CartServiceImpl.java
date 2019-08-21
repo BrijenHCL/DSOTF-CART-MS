@@ -6,6 +6,7 @@
  */
 package com.ulta.cart.serviceImpl;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutionException;
@@ -21,14 +22,18 @@ import org.springframework.stereotype.Service;
 import com.neovisionaries.i18n.CountryCode;
 import com.ulta.cart.exception.CartException;
 import com.ulta.cart.request.CreateCartRequest;
+import com.ulta.cart.request.RemoveLineItemRequest;
 import com.ulta.cart.service.CartService;
 
 import io.sphere.sdk.carts.Cart;
 import io.sphere.sdk.carts.CartDraft;
+import io.sphere.sdk.carts.LineItem;
 import io.sphere.sdk.carts.commands.CartCreateCommand;
 import io.sphere.sdk.carts.commands.CartUpdateCommand;
 import io.sphere.sdk.carts.commands.updateactions.AddLineItem;
+import io.sphere.sdk.carts.commands.updateactions.RemoveLineItem;
 import io.sphere.sdk.carts.queries.CartByCustomerIdGet;
+import io.sphere.sdk.carts.queries.CartByIdGet;
 import io.sphere.sdk.carts.queries.CartQuery;
 import io.sphere.sdk.carts.queries.CartQueryBuilder;
 import io.sphere.sdk.client.SphereClient;
@@ -41,6 +46,7 @@ public class CartServiceImpl implements CartService {
 	@Autowired
 	SphereClient sphereClient;
 	Cart cart = null;
+	CompletableFuture<Cart> cartFuture = null;
 	static Logger log = LoggerFactory.getLogger(CartServiceImpl.class);
 
 	/*
@@ -226,6 +232,44 @@ public class CartServiceImpl implements CartService {
 
 	public void setSphereClient(SphereClient sphereClient) {
 		this.sphereClient = sphereClient;
+	}
+
+	@Override
+	public CompletableFuture<Cart> removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException {
+		log.info("Removing line item from cart start");
+		CompletionStage<Cart> fetchedCart = sphereClient.execute(CartByIdGet.of(removeLineItemRequest.getCartId()));
+		CompletableFuture<Cart> futureCart = fetchedCart.toCompletableFuture();
+
+		try {
+			Cart flattenedCart = futureCart.get();
+			List<LineItem> lineItems = flattenedCart.getLineItems();
+			lineItems.forEach(lineItem -> {
+				if (lineItem.getProductId().equals(removeLineItemRequest.getProductId().trim())) {
+					if (lineItem.getQuantity() == removeLineItemRequest.getQuantity()) {
+						CompletionStage<Cart> cart1 = sphereClient
+								.execute(CartUpdateCommand.of(flattenedCart, RemoveLineItem.of(lineItem)));
+						cartFuture = cart1.toCompletableFuture();
+					}
+
+					else {
+						try {
+							CompletionStage<Cart> cart1 = sphereClient.execute(CartUpdateCommand.of(flattenedCart,
+									RemoveLineItem.of(lineItem, removeLineItemRequest.getQuantity())));
+
+							cartFuture = cart1.toCompletableFuture();
+						} catch (Exception e) {
+							log.error("Exception during removing line iteme from cart, details-" + e.getMessage());
+							throw new CartException(e.getMessage());
+						}
+					}
+				}
+			});
+			log.info("Removing line item from cart successfull");
+			return cartFuture;
+		} catch (Exception e) {
+			log.error("Exception during removing line item from cart, details-" + e.getMessage());
+			throw new CartException(e.getMessage());
+		}
 	}
 
 }

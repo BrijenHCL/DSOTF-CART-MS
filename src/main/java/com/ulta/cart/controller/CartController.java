@@ -6,9 +6,7 @@
  */
 package com.ulta.cart.controller;
 
-import static com.ulta.cart.constant.CartConstants.ADDLINEITEM_URI;
-import static com.ulta.cart.constant.CartConstants.CART_BASE_URI;
-import static com.ulta.cart.constant.CartConstants.GET_ALL_CARTS_URI;
+import static com.ulta.cart.constant.CartConstants.*;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -24,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ulta.cart.exception.CartException;
 import com.ulta.cart.request.CreateCartRequest;
+import com.ulta.cart.request.RemoveLineItemRequest;
 import com.ulta.cart.service.CartService;
 
 import io.sphere.sdk.carts.Cart;
@@ -68,6 +67,12 @@ public class CartController {
 	@RequestMapping(path = GET_ALL_CARTS_URI, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<CompletableFuture<PagedQueryResult<Cart>>> getAllCarts() throws CartException {
 		CompletableFuture<PagedQueryResult<Cart>> carts=cartService.getAllCarts();
+		return ResponseEntity.ok().body(carts);
+	}
+	
+	@RequestMapping(path = REMOVE_LINEITEM_URI, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<CompletableFuture<Cart>> removeItemFromCart(@RequestBody RemoveLineItemRequest removeLineItemRequest) throws CartException {
+		CompletableFuture<Cart> carts=cartService.removeLineItem(removeLineItemRequest);
 		return ResponseEntity.ok().body(carts);
 	}
 

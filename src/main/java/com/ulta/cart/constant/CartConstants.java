@@ -14,5 +14,6 @@ public class CartConstants {
 	public static final String CART_BASE_URI = "/v1/carts";
 	public static final String ADDLINEITEM_URI = "/addItemToCart";
 	public static final String GET_ALL_CARTS_URI = "/getAllCarts";
-
+	public static final String REMOVE_LINEITEM_URI = "/removeLineItem";
+	
 }
