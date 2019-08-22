@@ -23,6 +23,6 @@ public interface CartService {
 	public CompletableFuture<Cart> addToCart(CreateCartRequest requestDto) throws CartException;
 
 	public CompletableFuture<PagedQueryResult<Cart>> getAllCarts() throws CartException;
-	
+
 	public CompletableFuture<Cart> removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException;
 }

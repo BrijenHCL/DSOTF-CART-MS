@@ -55,6 +55,7 @@ public class CartServiceImpl implements CartService {
 	 * @see com.ulta.cart.service.CartService#addToCart(com.ulta.cart.request.
 	 * CreateCartRequest)
 	 */
+	@SuppressWarnings("deprecation")
 	@Override
 	public CompletableFuture<Cart> addToCart(CreateCartRequest requestDto) throws CartException {
 		// String customerId = "3105139a-d065-4589-a581-522b55a7dd25";
@@ -76,23 +77,16 @@ public class CartServiceImpl implements CartService {
 					throw new CartException(e.getMessage());
 				}
 				log.info("Cart created Successfully for existing customer");
-			} else
+			} else {
 				log.info("Cart already available for provided user.");
+			}
 		}
-		// log.info("Created cart for customer"+cart.getId());
+
 		log.info("Adding line item to cart for user.");
 		final AddLineItem action = AddLineItem.of(requestDto.getProductId(), MASTER_VARIANT_ID,
 				requestDto.getQuantity());
 		final CompletionStage<Cart> updatedCart = sphereClient.execute(CartUpdateCommand.of(cart, action));
 		final CompletableFuture<Cart> futureCart = updatedCart.toCompletableFuture();
-//		try {
-//			if (null != futureCart.get()) {
-//				cart = futureCart.get();
-//			}
-//		} catch (InterruptedException | ExecutionException e) {
-//			log.error("Exception during adding line item to cart, details-" + e.getMessage());
-//			throw new CartException(e.getMessage());
-//		}
 		log.info("Line item added successfully to cart for user.");
 		return futureCart;
 	}
@@ -109,6 +103,51 @@ public class CartServiceImpl implements CartService {
 		CompletionStage<PagedQueryResult<Cart>> cartList = sphereClient.execute(query);
 		CompletableFuture<PagedQueryResult<Cart>> cart = cartList.toCompletableFuture();
 		return cart;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * 
+	 * @see com.ulta.cart.service.CartService#removeLineItem(com.ulta.cart.request.
+	 * RemoveLineItemRequest)
+	 */
+
+	@Override
+	public CompletableFuture<Cart> removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException {
+		log.info("Removing line item from cart start");
+		CompletionStage<Cart> fetchedCart = sphereClient.execute(CartByIdGet.of(removeLineItemRequest.getCartId()));
+		CompletableFuture<Cart> futureCart = fetchedCart.toCompletableFuture();
+
+		try {
+			Cart flattenedCart = futureCart.get();
+			List<LineItem> lineItems = flattenedCart.getLineItems();
+			lineItems.forEach(lineItem -> {
+				if (lineItem.getProductId().equals(removeLineItemRequest.getProductId().trim())) {
+					if (lineItem.getQuantity() == removeLineItemRequest.getQuantity()) {
+						CompletionStage<Cart> cart1 = sphereClient
+								.execute(CartUpdateCommand.of(flattenedCart, RemoveLineItem.of(lineItem)));
+						cartFuture = cart1.toCompletableFuture();
+					}
+
+					else {
+						try {
+							CompletionStage<Cart> cart1 = sphereClient.execute(CartUpdateCommand.of(flattenedCart,
+									RemoveLineItem.of(lineItem, removeLineItemRequest.getQuantity())));
+
+							cartFuture = cart1.toCompletableFuture();
+						} catch (Exception e) {
+							log.error("Exception during removing line iteme from cart, details-" + e.getMessage());
+							throw new CartException(e.getMessage());
+						}
+					}
+				}
+			});
+			log.info("Removing line item from cart successfull");
+			return cartFuture;
+		} catch (Exception e) {
+			log.error("Exception during removing line item from cart, details-" + e.getMessage());
+			throw new CartException(e.getMessage());
+		}
 	}
 
 	/**
@@ -168,6 +207,7 @@ public class CartServiceImpl implements CartService {
 		}
 		return null;
 	}
+
 	// To be used when processing checkout for anonymous user
 	/*
 	 * try { final CustomerSignInCommand cmd = CustomerSignInCommand
@@ -232,44 +272,6 @@ public class CartServiceImpl implements CartService {
 
 	public void setSphereClient(SphereClient sphereClient) {
 		this.sphereClient = sphereClient;
-	}
-
-	@Override
-	public CompletableFuture<Cart> removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException {
-		log.info("Removing line item from cart start");
-		CompletionStage<Cart> fetchedCart = sphereClient.execute(CartByIdGet.of(removeLineItemRequest.getCartId()));
-		CompletableFuture<Cart> futureCart = fetchedCart.toCompletableFuture();
-
-		try {
-			Cart flattenedCart = futureCart.get();
-			List<LineItem> lineItems = flattenedCart.getLineItems();
-			lineItems.forEach(lineItem -> {
-				if (lineItem.getProductId().equals(removeLineItemRequest.getProductId().trim())) {
-					if (lineItem.getQuantity() == removeLineItemRequest.getQuantity()) {
-						CompletionStage<Cart> cart1 = sphereClient
-								.execute(CartUpdateCommand.of(flattenedCart, RemoveLineItem.of(lineItem)));
-						cartFuture = cart1.toCompletableFuture();
-					}
-
-					else {
-						try {
-							CompletionStage<Cart> cart1 = sphereClient.execute(CartUpdateCommand.of(flattenedCart,
-									RemoveLineItem.of(lineItem, removeLineItemRequest.getQuantity())));
-
-							cartFuture = cart1.toCompletableFuture();
-						} catch (Exception e) {
-							log.error("Exception during removing line iteme from cart, details-" + e.getMessage());
-							throw new CartException(e.getMessage());
-						}
-					}
-				}
-			});
-			log.info("Removing line item from cart successfull");
-			return cartFuture;
-		} catch (Exception e) {
-			log.error("Exception during removing line item from cart, details-" + e.getMessage());
-			throw new CartException(e.getMessage());
-		}
 	}
 
 }

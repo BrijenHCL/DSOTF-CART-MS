@@ -33,8 +33,7 @@ public class CommercetoolsConfig {
 		SphereClientConfig config = SphereClientConfig.of(env.getProperty("ctprojectKey"),
 				env.getProperty("ctclientId"), env.getProperty("ctclientSecret"), env.getProperty("ctauthUrl"),
 				env.getProperty("ctapiUrl"));
-		final SphereClient asyncClient = SphereClientFactory.of().createClient(config);
-		return asyncClient;
-		// BlockingSphereClient.of(asyncClient, 20, TimeUnit.SECONDS);
+		return SphereClientFactory.of().createClient(config);
+
 	}
 }

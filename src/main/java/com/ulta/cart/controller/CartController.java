@@ -6,7 +6,10 @@
  */
 package com.ulta.cart.controller;
 
-import static com.ulta.cart.constant.CartConstants.*;
+import static com.ulta.cart.constant.CartConstants.ADDLINEITEM_URI;
+import static com.ulta.cart.constant.CartConstants.CART_BASE_URI;
+import static com.ulta.cart.constant.CartConstants.GET_ALL_CARTS_URI;
+import static com.ulta.cart.constant.CartConstants.REMOVE_LINEITEM_URI;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -44,7 +47,8 @@ public class CartController {
 	 * @throws CartException
 	 */
 	@RequestMapping(path = ADDLINEITEM_URI, method = RequestMethod.POST, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<CompletableFuture<Cart>> addItemToCart(@RequestBody CreateCartRequest requestDto) throws CartException {
+	public ResponseEntity<CompletableFuture<Cart>> addItemToCart(@RequestBody CreateCartRequest requestDto)
+			throws CartException {
 		log.info("Add Item to Cart Start");
 		CompletableFuture<Cart> fetchedCart = null;
 		try {
@@ -66,13 +70,21 @@ public class CartController {
 
 	@RequestMapping(path = GET_ALL_CARTS_URI, method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
 	public ResponseEntity<CompletableFuture<PagedQueryResult<Cart>>> getAllCarts() throws CartException {
-		CompletableFuture<PagedQueryResult<Cart>> carts=cartService.getAllCarts();
+		CompletableFuture<PagedQueryResult<Cart>> carts = cartService.getAllCarts();
 		return ResponseEntity.ok().body(carts);
 	}
-	
+
+	/**
+	 * 
+	 * @param removeLineItemRequest
+	 * @return
+	 * @throws CartException
+	 */
+
 	@RequestMapping(path = REMOVE_LINEITEM_URI, method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
-	public ResponseEntity<CompletableFuture<Cart>> removeItemFromCart(@RequestBody RemoveLineItemRequest removeLineItemRequest) throws CartException {
-		CompletableFuture<Cart> carts=cartService.removeLineItem(removeLineItemRequest);
+	public ResponseEntity<CompletableFuture<Cart>> removeItemFromCart(
+			@RequestBody RemoveLineItemRequest removeLineItemRequest) throws CartException {
+		CompletableFuture<Cart> carts = cartService.removeLineItem(removeLineItemRequest);
 		return ResponseEntity.ok().body(carts);
 	}
 
