@@ -88,10 +88,6 @@ public class CartController {
 		return ResponseEntity.ok().body(carts);
 	}
 
-	public CartService getCartService() {
-		return cartService;
-	}
-
 	public void setCartService(CartService cartService) {
 		this.cartService = cartService;
 	}
