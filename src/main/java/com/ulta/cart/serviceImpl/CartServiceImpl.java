@@ -20,9 +20,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.neovisionaries.i18n.CountryCode;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import com.ulta.cart.exception.CartException;
 import com.ulta.cart.request.CreateCartRequest;
 import com.ulta.cart.request.RemoveLineItemRequest;
+import com.ulta.cart.resources.HystrixCommandPropertyResource;
 import com.ulta.cart.service.CartService;
 
 import io.sphere.sdk.carts.Cart;
@@ -45,6 +47,9 @@ public class CartServiceImpl implements CartService {
 	private static final int MASTER_VARIANT_ID = 1;
 	@Autowired
 	SphereClient sphereClient;
+	@Autowired
+	HystrixCommandPropertyResource hystrixCommandProp;
+	
 	Cart cart = null;
 	CompletionStage<Cart> cartStage = null;
 	static Logger log = LoggerFactory.getLogger(CartServiceImpl.class);
@@ -57,6 +62,8 @@ public class CartServiceImpl implements CartService {
 	 */
 	@SuppressWarnings("deprecation")
 	@Override
+	@HystrixCommand(fallbackMethod = "addItemToCartFallback", ignoreExceptions = {
+			CartException.class }, commandKey = "CARTADDITEMCommand", threadPoolKey = "CARTThreadPool")
 	public Cart addToCart(CreateCartRequest requestDto) throws CartException, InterruptedException, ExecutionException {
 		// String customerId = "3105139a-d065-4589-a581-522b55a7dd25";
 		if (requestDto.isAnonymousUser()) {
@@ -100,6 +107,8 @@ public class CartServiceImpl implements CartService {
 	 * 
 	 * @see com.ulta.cart.service.CartService#getAllCarts()
 	 */
+	@HystrixCommand(fallbackMethod = "getAllCartsFallback", ignoreExceptions = {
+			CartException.class }, commandKey = "CARTGETALLCommand", threadPoolKey = "CARTThreadPool")
 	@Override
 	public PagedQueryResult<Cart> getAllCarts() throws CartException, InterruptedException, ExecutionException {
 		CartQueryBuilder cartQueryBuilder = CartQueryBuilder.of().fetchTotal(true);
@@ -120,7 +129,8 @@ public class CartServiceImpl implements CartService {
 	 * @see com.ulta.cart.service.CartService#removeLineItem(com.ulta.cart.request.
 	 * RemoveLineItemRequest)
 	 */
-
+	@HystrixCommand(fallbackMethod = "removeLineItemFallback", ignoreExceptions = {
+			CartException.class }, commandKey = "CARTREMOVELINEITEMCommand", threadPoolKey = "CARTThreadPool")
 	@Override
 	public Cart removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException {
 		log.info("Removing line item from cart start");
@@ -213,6 +223,22 @@ public class CartServiceImpl implements CartService {
 		return null;
 	}
 
+	public Cart addItemToCartFallback(CreateCartRequest createCartRequest)
+			throws CartException, InterruptedException, ExecutionException {
+		log.error("Critical -  CommerceTool UnAvailability error");
+		throw new CartException("Failure while adding line item to cart");
+	}
+	
+	public PagedQueryResult<Cart> getAllCartsFallback() throws CartException{
+		log.error("Critical -  CommerceTool UnAvailability error");
+		throw new CartException("Failure while fetching all carts");
+	}
+	
+	public Cart removeLineItemFallback(RemoveLineItemRequest request) throws CartException {
+		log.error("Critical -  CommerceTool UnAvailability error");
+		throw new CartException("Failure while removing line item");
+	}
+	
 	// To be used when processing checkout for anonymous user
 	/*
 	 * try { final CustomerSignInCommand cmd = CustomerSignInCommand
