@@ -6,7 +6,7 @@
  */
 package com.ulta.cart.service;
 
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.springframework.stereotype.Service;
 
@@ -20,9 +20,9 @@ import io.sphere.sdk.queries.PagedQueryResult;
 @Service
 public interface CartService {
 
-	public CompletableFuture<Cart> addToCart(CreateCartRequest requestDto) throws CartException;
+	public Cart addToCart(CreateCartRequest requestDto) throws CartException, InterruptedException, ExecutionException;
 
-	public CompletableFuture<PagedQueryResult<Cart>> getAllCarts() throws CartException;
+	public PagedQueryResult<Cart> getAllCarts() throws CartException, InterruptedException, ExecutionException;
 
-	public CompletableFuture<Cart> removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException;
+	public Cart removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException;
 }
