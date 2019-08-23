@@ -1,9 +1,9 @@
 /*
-* Copyright (C) 2019 ULTA
-* http://www.ulta.com
-* BrijendraK@ulta.com
-* All rights reserved
-*/
+ * Copyright (C) 2019 ULTA
+ * http://www.ulta.com
+ * BrijendraK@ulta.com
+ * All rights reserved
+ */
 package com.ulta.cart.serviceImpl;
 
 import java.util.List;
@@ -87,11 +87,11 @@ public class CartServiceImpl implements CartService {
 				requestDto.getQuantity());
 		final CompletionStage<Cart> updatedCart = sphereClient.execute(CartUpdateCommand.of(cart, action));
 		CompletableFuture<Cart> futureCart = null;
-
-		if (null != updatedCart) {
-			futureCart = updatedCart.toCompletableFuture();
+		
+		if(null!=updatedCart) {
+			futureCart=updatedCart.toCompletableFuture();
 		}
-
+		
 		return futureCart.get();
 	}
 
@@ -105,7 +105,7 @@ public class CartServiceImpl implements CartService {
 		CartQueryBuilder cartQueryBuilder = CartQueryBuilder.of().fetchTotal(true);
 		CartQuery query = cartQueryBuilder.build();
 		CompletionStage<PagedQueryResult<Cart>> cartList = sphereClient.execute(query);
-		CompletableFuture<PagedQueryResult<Cart>> cart = null;
+		CompletableFuture<PagedQueryResult<Cart>> cart =null;
 		if (null != cartList) {
 			cart = cartList.toCompletableFuture();
 		} else {
@@ -135,9 +135,10 @@ public class CartServiceImpl implements CartService {
 					if (lineItem.getQuantity() == removeLineItemRequest.getQuantity()) {
 						cartStage = sphereClient
 								.execute(CartUpdateCommand.of(flattenedCart, RemoveLineItem.of(lineItem)));
-					} else {
-						cartStage = sphereClient.execute(CartUpdateCommand.of(flattenedCart,
-								RemoveLineItem.of(lineItem, removeLineItemRequest.getQuantity())));
+					}
+					else {
+							cartStage = sphereClient.execute(CartUpdateCommand.of(flattenedCart,
+									RemoveLineItem.of(lineItem, removeLineItemRequest.getQuantity())));
 					}
 				}
 			});
@@ -146,7 +147,7 @@ public class CartServiceImpl implements CartService {
 			} else {
 				throw new CartException("Cart list is empty");
 			}
-			cart = futureCart.get();
+			cart= futureCart.get();
 			return cart;
 		} catch (Exception e) {
 			log.error("Exception during removing line item from cart, details-" + e.getMessage());
