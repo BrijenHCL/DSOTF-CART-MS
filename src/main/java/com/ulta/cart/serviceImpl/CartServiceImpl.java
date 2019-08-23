@@ -1,9 +1,9 @@
 /*
- * Copyright (C) 2019 ULTA
- * http://www.ulta.com
- * BrijendraK@ulta.com
- * All rights reserved
- */
+* Copyright (C) 2019 ULTA
+* http://www.ulta.com
+* BrijendraK@ulta.com
+* All rights reserved
+*/
 package com.ulta.cart.serviceImpl;
 
 import java.util.List;
@@ -46,7 +46,7 @@ public class CartServiceImpl implements CartService {
 	@Autowired
 	SphereClient sphereClient;
 	Cart cart = null;
-	CompletableFuture<Cart> cartFuture = null;
+	CompletionStage<Cart> cartStage = null;
 	static Logger log = LoggerFactory.getLogger(CartServiceImpl.class);
 
 	/*
@@ -57,7 +57,7 @@ public class CartServiceImpl implements CartService {
 	 */
 	@SuppressWarnings("deprecation")
 	@Override
-	public CompletableFuture<Cart> addToCart(CreateCartRequest requestDto) throws CartException {
+	public Cart addToCart(CreateCartRequest requestDto) throws CartException, InterruptedException, ExecutionException {
 		// String customerId = "3105139a-d065-4589-a581-522b55a7dd25";
 		if (requestDto.isAnonymousUser()) {
 			try {
@@ -86,9 +86,13 @@ public class CartServiceImpl implements CartService {
 		final AddLineItem action = AddLineItem.of(requestDto.getProductId(), MASTER_VARIANT_ID,
 				requestDto.getQuantity());
 		final CompletionStage<Cart> updatedCart = sphereClient.execute(CartUpdateCommand.of(cart, action));
-		final CompletableFuture<Cart> futureCart = updatedCart.toCompletableFuture();
-		log.info("Line item added successfully to cart for user.");
-		return futureCart;
+		CompletableFuture<Cart> futureCart = null;
+
+		if (null != updatedCart) {
+			futureCart = updatedCart.toCompletableFuture();
+		}
+
+		return futureCart.get();
 	}
 
 	/*
@@ -97,12 +101,17 @@ public class CartServiceImpl implements CartService {
 	 * @see com.ulta.cart.service.CartService#getAllCarts()
 	 */
 	@Override
-	public CompletableFuture<PagedQueryResult<Cart>> getAllCarts() throws CartException {
+	public PagedQueryResult<Cart> getAllCarts() throws CartException, InterruptedException, ExecutionException {
 		CartQueryBuilder cartQueryBuilder = CartQueryBuilder.of().fetchTotal(true);
 		CartQuery query = cartQueryBuilder.build();
 		CompletionStage<PagedQueryResult<Cart>> cartList = sphereClient.execute(query);
-		CompletableFuture<PagedQueryResult<Cart>> cart = cartList.toCompletableFuture();
-		return cart;
+		CompletableFuture<PagedQueryResult<Cart>> cart = null;
+		if (null != cartList) {
+			cart = cartList.toCompletableFuture();
+		} else {
+			throw new CartException("Cart list is empty");
+		}
+		return cart.get();
 	}
 
 	/*
@@ -113,7 +122,7 @@ public class CartServiceImpl implements CartService {
 	 */
 
 	@Override
-	public CompletableFuture<Cart> removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException {
+	public Cart removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException {
 		log.info("Removing line item from cart start");
 		CompletionStage<Cart> fetchedCart = sphereClient.execute(CartByIdGet.of(removeLineItemRequest.getCartId()));
 		CompletableFuture<Cart> futureCart = fetchedCart.toCompletableFuture();
@@ -124,26 +133,21 @@ public class CartServiceImpl implements CartService {
 			lineItems.forEach(lineItem -> {
 				if (lineItem.getProductId().equals(removeLineItemRequest.getProductId().trim())) {
 					if (lineItem.getQuantity() == removeLineItemRequest.getQuantity()) {
-						CompletionStage<Cart> cart1 = sphereClient
+						cartStage = sphereClient
 								.execute(CartUpdateCommand.of(flattenedCart, RemoveLineItem.of(lineItem)));
-						cartFuture = cart1.toCompletableFuture();
-					}
-
-					else {
-						try {
-							CompletionStage<Cart> cart1 = sphereClient.execute(CartUpdateCommand.of(flattenedCart,
-									RemoveLineItem.of(lineItem, removeLineItemRequest.getQuantity())));
-
-							cartFuture = cart1.toCompletableFuture();
-						} catch (Exception e) {
-							log.error("Exception during removing line iteme from cart, details-" + e.getMessage());
-							throw new CartException(e.getMessage());
-						}
+					} else {
+						cartStage = sphereClient.execute(CartUpdateCommand.of(flattenedCart,
+								RemoveLineItem.of(lineItem, removeLineItemRequest.getQuantity())));
 					}
 				}
 			});
-			log.info("Removing line item from cart successfull");
-			return cartFuture;
+			if (null != cartStage) {
+				futureCart = cartStage.toCompletableFuture();
+			} else {
+				throw new CartException("Cart list is empty");
+			}
+			cart = futureCart.get();
+			return cart;
 		} catch (Exception e) {
 			log.error("Exception during removing line item from cart, details-" + e.getMessage());
 			throw new CartException(e.getMessage());
