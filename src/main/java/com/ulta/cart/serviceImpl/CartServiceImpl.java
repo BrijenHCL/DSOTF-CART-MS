@@ -78,12 +78,20 @@ public class CartServiceImpl implements CartService {
 			boolean isCartAvailable = isCartAvailable(requestDto.getCustomerId());
 			if (!isCartAvailable) {
 				try {
-					cart = createCart(requestDto).get();
+					CompletableFuture<Cart> cartResponse= createCart(requestDto);
+					if (null!=cartResponse){
+						cart = cartResponse.get();	
+						log.info("Cart created Successfully for existing customer");
+					}
+					else{
+						throw new CartException("Unable to create Cart for this user");
+					}
+					
 				} catch (InterruptedException | ExecutionException e) {
 					log.error("Exception during creating cart for existing user, details-" + e.getMessage());
 					throw new CartException(e.getMessage());
 				}
-				log.info("Cart created Successfully for existing customer");
+				
 			} else {
 				log.info("Cart already available for provided user.");
 			}
@@ -134,10 +142,10 @@ public class CartServiceImpl implements CartService {
 	@Override
 	public Cart removeLineItem(RemoveLineItemRequest removeLineItemRequest) throws CartException {
 		log.info("Removing line item from cart start");
-		CompletionStage<Cart> fetchedCart = sphereClient.execute(CartByIdGet.of(removeLineItemRequest.getCartId()));
-		CompletableFuture<Cart> futureCart = fetchedCart.toCompletableFuture();
-
+		CompletableFuture<Cart> futureCart= getCart(removeLineItemRequest);
+		
 		try {
+			
 			Cart flattenedCart = futureCart.get();
 			List<LineItem> lineItems = flattenedCart.getLineItems();
 			lineItems.forEach(lineItem -> {
@@ -165,20 +173,28 @@ public class CartServiceImpl implements CartService {
 		}
 	}
 
+	public CompletableFuture<Cart> getCart(RemoveLineItemRequest removeLineItemRequest) {
+		CompletionStage<Cart> fetchedCart = sphereClient.execute(CartByIdGet.of(removeLineItemRequest.getCartId()));
+		CompletableFuture<Cart> futureCart = fetchedCart.toCompletableFuture();
+		return futureCart;
+	}
+
+
 	/**
 	 * 
 	 * @param customerId
 	 * @return
 	 */
 
-	private boolean isCartAvailable(String customerId) {
+	public boolean isCartAvailable(String customerId) {
 		final CartByCustomerIdGet request = CartByCustomerIdGet.of(customerId);
 		final CompletionStage<Cart> fetchedCart = sphereClient.execute(request);
-		CompletableFuture<Cart> futureCart = fetchedCart.toCompletableFuture();
+		CompletableFuture<Cart> futureCart = null;
 		try {
-			if (null != futureCart.get()) {
-				cart = futureCart.get();
-				if (null != cart)
+			if (null!= fetchedCart) {
+				futureCart=fetchedCart.toCompletableFuture();
+				//cart = futureCart.get();
+				if (null!= futureCart&& null != futureCart.get())
 					return true;
 			}
 		} catch (InterruptedException | ExecutionException e) {
@@ -203,7 +219,10 @@ public class CartServiceImpl implements CartService {
 
 		final CartCreateCommand cartCreateCommand = CartCreateCommand.of(cartDraft);
 		final CompletionStage<Cart> cart = sphereClient.execute(cartCreateCommand);
-		return cart.toCompletableFuture();
+		if(null!=cart) {
+			return cart.toCompletableFuture();	
+		}
+		else return null;
 	}
 
 	/**
@@ -287,14 +306,7 @@ public class CartServiceImpl implements CartService {
 		return cu;
 	}
 
-	/**
-	 * 
-	 * @return
-	 */
 
-	public SphereClient getSphereClient() {
-		return sphereClient;
-	}
 
 	/**
 	 * 
