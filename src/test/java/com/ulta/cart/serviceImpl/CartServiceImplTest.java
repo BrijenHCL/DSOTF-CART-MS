@@ -26,6 +26,7 @@ import com.ulta.cart.request.RemoveLineItemRequest;
 
 import io.netty.util.concurrent.CompleteFuture;
 import io.sphere.sdk.carts.Cart;
+import io.sphere.sdk.carts.LineItem;
 import io.sphere.sdk.carts.commands.CartCreateCommand;
 import io.sphere.sdk.carts.queries.CartByCustomerIdGet;
 import io.sphere.sdk.carts.queries.CartByIdGet;
@@ -93,6 +94,8 @@ public class CartServiceImplTest {
 		c.whenComplete((BiConsumer<? super Cart, ? super Throwable>) completeFuture);*/
 		CompletableFuture<Cart> completeFuture = new CompletableFuture<Cart>();
 		Cart value= Mockito.mock(Cart.class);
+		LineItem e= Mockito.mock(LineItem.class);
+		value.getLineItems().add(e);
 		completeFuture.complete(value);
 		CompletionStage<Cart> fetchedCart = Mockito.mock(CompletionStage.class);
 		RemoveLineItemRequest removeLineItemRequest= new RemoveLineItemRequest();
@@ -122,15 +125,15 @@ public class CartServiceImplTest {
 		
 	}
 	
-	/*@Test(expected=CartException.class)
+	@Test(expected=CartException.class)
 	public void testisCartAvailbaleforException(){
 		String customerId= "CUSTO1";
 		CompletionStage<Cart> fetchedCart = Mockito.mock(CompletionStage.class);
 		CartByCustomerIdGet request = CartByCustomerIdGet.of(customerId);
-		when(sphereClient.execute(request)).thenReturn(fetchedCart);
+		when(sphereClient.execute(request)).thenThrow(new CartException("Failure"));
 	boolean value=	cartService.isCartAvailable(customerId);
 		
-	}*/
+	}
 	
 	
 	@Test(expected=CartException.class)
@@ -147,5 +150,17 @@ public class CartServiceImplTest {
 	public void testremoveLineItemFallback() throws CartException, InterruptedException, ExecutionException {
 		RemoveLineItemRequest request= new RemoveLineItemRequest();
 		cartService.removeLineItemFallback(request);
+	}
+	
+	@Test
+	public void  testGetCurrency() {
+		cartService.getCurrency("US").getContext();
+		cartService.getCurrency("US").getCurrencyCode();
+		cartService.getCurrency("US").getNumericCode();
+		cartService.getCurrency("US").getDefaultFractionDigits();
+		
+		
+		
+		
 	}
 }
