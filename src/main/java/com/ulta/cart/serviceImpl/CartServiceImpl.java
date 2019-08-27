@@ -270,7 +270,7 @@ public class CartServiceImpl implements CartService {
 	 * block e.printStackTrace(); }
 	 */
 
-	private CurrencyUnit getCurrency(String code) {
+	public CurrencyUnit getCurrency(String code) {
 		CurrencyUnit cu = new CurrencyUnit() {
 
 			@Override
