@@ -65,11 +65,10 @@ public class CartServiceImpl implements CartService {
 	@HystrixCommand(fallbackMethod = "addItemToCartFallback", ignoreExceptions = {
 			CartException.class }, commandKey = "CARTADDITEMCommand", threadPoolKey = "CARTThreadPool")
 	public Cart addToCart(CreateCartRequest requestDto) throws CartException, InterruptedException, ExecutionException {
-		// String customerId = "3105139a-d065-4589-a581-522b55a7dd25";
 		if (requestDto.isAnonymousUser()) {
 			try {
 				cart = createCartForAnonymousUser(requestDto).get();
-			} catch (InterruptedException | ExecutionException e) {
+			} catch (Exception e) {
 				log.error("Exception during creating cart for anonymous user, details-" + e.getMessage());
 				throw new CartException(e.getMessage());
 			}
@@ -87,7 +86,7 @@ public class CartServiceImpl implements CartService {
 						throw new CartException("Unable to create Cart for this user");
 					}
 					
-				} catch (InterruptedException | ExecutionException e) {
+				} catch (Exception e) {
 					log.error("Exception during creating cart for existing user, details-" + e.getMessage());
 					throw new CartException(e.getMessage());
 				}
@@ -122,7 +121,7 @@ public class CartServiceImpl implements CartService {
 		CartQueryBuilder cartQueryBuilder = CartQueryBuilder.of().fetchTotal(true);
 		CartQuery query = cartQueryBuilder.build();
 		CompletionStage<PagedQueryResult<Cart>> cartList = sphereClient.execute(query);
-		CompletableFuture<PagedQueryResult<Cart>> cart =null;
+		CompletableFuture<PagedQueryResult<Cart>> cart;
 		if (null != cartList) {
 			cart = cartList.toCompletableFuture();
 		} else {
@@ -193,11 +192,10 @@ public class CartServiceImpl implements CartService {
 		try {
 			if (null!= fetchedCart) {
 				futureCart=fetchedCart.toCompletableFuture();
-				//cart = futureCart.get();
 				if (null!= futureCart&& null != futureCart.get())
 					return true;
 			}
-		} catch (InterruptedException | ExecutionException e) {
+		} catch (Exception e) {
 			log.error("Exception during checking available cart for user, details-" + e.getMessage());
 			throw new CartException(e.getMessage());
 		}
@@ -257,37 +255,25 @@ public class CartServiceImpl implements CartService {
 		log.error("Critical -  CommerceTool UnAvailability error");
 		throw new CartException("Failure while removing line item");
 	}
-	
-	// To be used when processing checkout for anonymous user
-	/*
-	 * try { final CustomerSignInCommand cmd = CustomerSignInCommand
-	 * .of(customer.getCustomerEmail(), customer.getPassword(),
-	 * cart.toCompletableFuture().get().getId())
-	 * .withAnonymousCartSignInMode(USE_AS_NEW_ACTIVE_CUSTOMER_CART); final
-	 * CompletionStage<CustomerSignInResult> result = sphereClient.execute(cmd);
-	 * resultingCart = result.toCompletableFuture().get().getCart(); } catch
-	 * (InterruptedException | ExecutionException e) { // TODO Auto-generated catch
-	 * block e.printStackTrace(); }
-	 */
 
 	public CurrencyUnit getCurrency(String code) {
 		CurrencyUnit cu = new CurrencyUnit() {
 
 			@Override
 			public int compareTo(CurrencyUnit o) {
-				// TODO Auto-generated method stub
+				
 				return 0;
 			}
 
 			@Override
 			public int getNumericCode() {
-				// TODO Auto-generated method stub
+				
 				return 0;
 			}
 
 			@Override
 			public int getDefaultFractionDigits() {
-				// TODO Auto-generated method stub
+				
 				return 0;
 			}
 
